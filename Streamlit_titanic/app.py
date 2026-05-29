@@ -1,6 +1,7 @@
+from libs.model import predict
+from models import Passenger, PredictionResult
 import streamlit as st
 import pickle
-import pandas as pd
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +9,7 @@ startTime = datetime.now()
 # import znanych nam bibliotek
 
 model_filename = "our_titanic_model.pkl"
-model_path = Path(__file__).parent / "models" / model_filename
+model_path = Path(__file__).parent / "ml_models" / model_filename
 model = pickle.load(open(model_path, 'rb'))
 # otwieramy wcześniej wytrenowany model
 
@@ -42,21 +43,24 @@ def main():
         parch_slider = st.slider("# Liczba rodziców i/lub dzieci", min_value=0, max_value=6)
         fare_slider = st.slider("Cena biletu", min_value=0, max_value=500, step=10)
 
-    data = pd.DataFrame([{
-        "Pclass": pclass_radio,
-        "Sex": sex_radio,
-        "Age": age_slider,
-        "SibSp": sibsp_slider,
-        "Parch": parch_slider,
-        "Fare": fare_slider,
-        "Embarked": embarked_radio,
-    }])
-    survival = model.predict(data)
-    s_confidence = model.predict_proba(data)
+    passenger = Passenger(
+        pclass=pclass_radio,
+        sex=sex_radio,
+        age=age_slider,
+        sibsp=sibsp_slider,
+        parch=parch_slider,
+        fare=fare_slider,
+        embarked=embarked_radio
+    )
+
+    survived, confidence = predict(passenger=passenger, model_path=model_path)
+
+
+    result = PredictionResult(survived=survived, confidence=confidence)
 
     with prediction:
-        st.header("Czy dana osoba przeżyje? {0}".format("Tak" if survival[0] == 1 else "Nie"))
-        st.subheader("Pewność predykcji {0:.2f} %".format(s_confidence[0][survival][0] * 100))
+        st.header("Czy dana osoba przeżyje? {0}".format("Tak" if result.survived else "Nie"))
+        st.subheader("Pewność predykcji {0:.2f} %".format(result.confidence))
 
 
 if __name__ == "__main__":
